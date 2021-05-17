@@ -15,6 +15,7 @@ import {
 } from './selection'
 import { createUniqueId, releaseUniqueId } from '../../lib/id-pool'
 import { range } from '../../../lib/range'
+import { ListItemInsertionOverlay } from './list-item-insertion-overlay'
 
 /**
  * Describe the first argument given to the cellRenderer,
@@ -796,7 +797,11 @@ export class List extends React.Component<IListProps, IListState> {
     // We only need to keep a reference to the focused element
     const ref = focused ? this.onFocusedItemRef : undefined
 
-    const element = this.props.rowRenderer(params.rowIndex)
+    const element = (
+      <ListItemInsertionOverlay>
+        {this.props.rowRenderer(params.rowIndex)}
+      </ListItemInsertionOverlay>
+    )
 
     const id = this.state.rowIdPrefix
       ? `${this.state.rowIdPrefix}-${rowIndex}`
