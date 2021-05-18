@@ -1,9 +1,12 @@
-import { String } from 'aws-sdk/clients/athena'
 import * as React from 'react'
 import { dragAndDropManager } from '../../../lib/drag-and-drop-manager'
 
+export const ListInsertionPlaceholderHeight = 15
+
 interface IListItemInsertionOverlayProps {
-  readonly something?: String
+  readonly onInsertionPointChange: (index: number | null) => void
+
+  readonly itemIndex: number
 }
 
 interface IListItemInsertionOverlayState {
@@ -27,70 +30,73 @@ export class ListItemInsertionOverlay extends React.PureComponent<
 
   public renderInsertionIndicator(isTop: boolean) {
     return (
-      <>
-        <div
-          style={{
-            position: 'absolute',
-            top: isTop ? -2 : undefined,
-            left: 10,
-            right: 0,
-            bottom: isTop ? undefined : 0,
-            height: '2px',
-            backgroundColor: 'var(--focus-color)',
-            zIndex: 1,
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            top: isTop ? -6 : undefined,
-            left: 0,
-            bottom: isTop ? undefined : -4,
-            width: '10px',
-            height: '10px',
-            borderColor: 'var(--focus-color)',
-            borderRadius: '50%',
-            borderStyle: 'solid',
-            borderWidth: '2px',
-            zIndex: 1,
-          }}
-        />
-      </>
+      <div
+        onMouseEnter={
+          isTop
+            ? this.onTopInsertionAreaMouseEnter
+            : this.onBottomInsertionAreaMouseEnter
+        }
+        onMouseLeave={
+          isTop
+            ? this.onTopInsertionAreaMouseLeave
+            : this.onBottomInsertionAreaMouseLeave
+        }
+        style={{
+          width: '100%',
+          height: ListInsertionPlaceholderHeight,
+          flexShrink: 0,
+          backgroundColor: 'lightgray',
+          zIndex: 1,
+        }}
+      />
     )
   }
 
   public render() {
     return (
-      <div style={{ width: '100%', height: '100%' }}>
-        {this.props.children}
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         <div
           onMouseEnter={this.onTopInsertionAreaMouseEnter}
           onMouseLeave={this.onTopInsertionAreaMouseLeave}
           style={{
             position: 'absolute',
             top: 0,
-            left: 10,
-            right: 15,
-            height: '15px',
+            left: 0,
+            right: 0,
+            height:
+              ListInsertionPlaceholderHeight +
+              (this.state.showTopInsertionIndicator
+                ? ListInsertionPlaceholderHeight
+                : 0),
           }}
-        >
-          {this.state.showTopInsertionIndicator &&
-            this.renderInsertionIndicator(true)}
-        </div>
+        />
+        {this.state.showTopInsertionIndicator &&
+          this.renderInsertionIndicator(true)}
+        {this.props.children}
+        {this.state.showBottomInsertionIndicator &&
+          this.renderInsertionIndicator(false)}
         <div
           onMouseEnter={this.onBottomInsertionAreaMouseEnter}
           onMouseLeave={this.onBottomInsertionAreaMouseLeave}
           style={{
             position: 'absolute',
             bottom: 0,
-            left: 10,
-            right: 15,
-            height: '15px',
+            left: 0,
+            right: 0,
+            height:
+              ListInsertionPlaceholderHeight +
+              (this.state.showBottomInsertionIndicator
+                ? ListInsertionPlaceholderHeight
+                : 0),
           }}
-        >
-          {this.state.showBottomInsertionIndicator &&
-            this.renderInsertionIndicator(false)}
-        </div>
+        />
       </div>
     )
   }
@@ -99,17 +105,29 @@ export class ListItemInsertionOverlay extends React.PureComponent<
     this.setState({
       showTopInsertionIndicator: dragAndDropManager.isDragInProgress,
     })
+
+    if (dragAndDropManager.isDragInProgress) {
+      this.props.onInsertionPointChange(this.props.itemIndex)
+    }
   }
+
   private onTopInsertionAreaMouseLeave = (event: React.MouseEvent) => {
     this.setState({ showTopInsertionIndicator: false })
+    this.props.onInsertionPointChange(null)
   }
 
   private onBottomInsertionAreaMouseEnter = (event: React.MouseEvent) => {
     this.setState({
       showBottomInsertionIndicator: dragAndDropManager.isDragInProgress,
     })
+
+    if (dragAndDropManager.isDragInProgress) {
+      this.props.onInsertionPointChange(this.props.itemIndex)
+    }
   }
+
   private onBottomInsertionAreaMouseLeave = (event: React.MouseEvent) => {
     this.setState({ showBottomInsertionIndicator: false })
+    this.props.onInsertionPointChange(null)
   }
 }
