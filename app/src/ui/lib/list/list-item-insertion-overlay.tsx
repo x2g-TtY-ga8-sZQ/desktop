@@ -7,6 +7,7 @@ interface IListItemInsertionOverlayProps {
   readonly onInsertionPointChange: (index: number | null) => void
 
   readonly itemIndex: number
+  readonly allowBottomInsertion: boolean
 }
 
 interface IListItemInsertionOverlayState {
@@ -70,33 +71,32 @@ export class ListItemInsertionOverlay extends React.PureComponent<
             top: 0,
             left: 0,
             right: 0,
-            height:
-              ListInsertionPlaceholderHeight +
-              (this.state.showTopInsertionIndicator
-                ? ListInsertionPlaceholderHeight
-                : 0),
+            height: ListInsertionPlaceholderHeight / 2,
           }}
         />
         {this.state.showTopInsertionIndicator &&
           this.renderInsertionIndicator(true)}
         {this.props.children}
         {this.state.showBottomInsertionIndicator &&
+          this.props.allowBottomInsertion &&
           this.renderInsertionIndicator(false)}
-        <div
-          onMouseEnter={this.onBottomInsertionAreaMouseEnter}
-          onMouseLeave={this.onBottomInsertionAreaMouseLeave}
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height:
-              ListInsertionPlaceholderHeight +
-              (this.state.showBottomInsertionIndicator
-                ? ListInsertionPlaceholderHeight
-                : 0),
-          }}
-        />
+        {this.props.allowBottomInsertion && (
+          <div
+            onMouseEnter={this.onBottomInsertionAreaMouseEnter}
+            onMouseLeave={this.onBottomInsertionAreaMouseLeave}
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height:
+                ListInsertionPlaceholderHeight / 2 +
+                (this.state.showBottomInsertionIndicator
+                  ? ListInsertionPlaceholderHeight
+                  : 0),
+            }}
+          />
+        )}
       </div>
     )
   }

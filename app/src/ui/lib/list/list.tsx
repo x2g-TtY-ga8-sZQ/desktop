@@ -834,6 +834,7 @@ export class List extends React.Component<IListProps, IListState> {
       <ListItemInsertionOverlay
         onInsertionPointChange={this.onInsertionPointChange}
         itemIndex={rowIndex}
+        allowBottomInsertion={true} //rowIndex === this.props.rowCount - 1}
       >
         {this.props.rowRenderer(rowIndex)}
       </ListItemInsertionOverlay>
