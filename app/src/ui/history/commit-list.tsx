@@ -8,7 +8,7 @@ import { arrayEquals } from '../../lib/equality'
 import { Popover, PopoverCaretPosition } from '../lib/popover'
 import { Button } from '../lib/button'
 import { encodePathAsUrl } from '../../lib/path'
-import { DragType } from '../../models/drag-drop'
+import { DragData, DragType } from '../../models/drag-drop'
 
 const RowHeight = 50
 
@@ -57,6 +57,19 @@ interface ICommitListProps {
 
   /** Callback to fire to delete an unpushed tag */
   readonly onDeleteTag: (tagName: string) => void
+
+  /**
+   * A handler called whenever the user drops commits on the list to be inserted.
+   *
+   * @param baseCommit - The commit before the selected commits will be inserted.
+   *                     This will be null when commits must be inserted at the
+   *                     end of the list.
+   * @param commitsToInsert -  The commits dropped by the user.
+   */
+  readonly onDropCommitInsertion?: (
+    baseCommit: Commit | null,
+    commitsToInsert: ReadonlyArray<Commit>
+  ) => void
 
   /** Callback to fire to cherry picking the commit  */
   readonly onCherryPick: (commits: ReadonlyArray<CommitOneLine>) => void
@@ -318,6 +331,7 @@ export class CommitList extends React.Component<ICommitListProps, {}> {
           rowHeight={RowHeight}
           selectedRows={this.props.selectedSHAs.map(sha => this.rowForSHA(sha))}
           rowRenderer={this.renderCommit}
+          onDropDataInsertion={this.onDropDataInsertion}
           onSelectionChanged={this.onSelectionChanged}
           onSelectedRowChanged={this.onSelectedRowChanged}
           selectionMode="multi"
@@ -336,6 +350,21 @@ export class CommitList extends React.Component<ICommitListProps, {}> {
         {this.renderCherryPickIntroPopover()}
       </div>
     )
+  }
+
+  private onDropDataInsertion = (row: number, data: DragData) => {
+    if (
+      this.props.onDropCommitInsertion === undefined ||
+      data.type !== DragType.Commit
+    ) {
+      return
+    }
+
+    const baseCommitSHA =
+      row < this.props.commitSHAs.length ? this.props.commitSHAs[row] : null
+    const baseCommit =
+      baseCommitSHA !== null ? this.props.commitLookup.get(baseCommitSHA) : null
+    this.props.onDropCommitInsertion(baseCommit ?? null, data.commits)
   }
 }
 

@@ -3073,6 +3073,17 @@ export class Dispatcher {
     this.appStore._setLastThankYou(lastThankYou)
   }
 
+  public async reorderCommits(
+    commitsToReorder: ReadonlyArray<Commit>,
+    beforeCommit: Commit | null
+  ) {
+    console.log(
+      `Moving ${JSON.stringify(
+        commitsToReorder.map(c => c.summary)
+      )} before ${JSON.stringify(beforeCommit && beforeCommit.summary)}`
+    )
+  }
+
   /**
    * Starts a squash
    *

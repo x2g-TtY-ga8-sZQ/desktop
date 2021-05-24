@@ -849,8 +849,8 @@ export class List extends React.Component<IListProps, IListState> {
       this.props.insertionDragType !== undefined ? (
         <ListItemInsertionOverlay
           onInsertionPointChange={this.onInsertionPointChange}
+          onDropDataInsertion={this.props.onDropDataInsertion}
           itemIndex={rowIndex}
-          allowBottomInsertion={true}
           dragType={this.props.insertionDragType}
         >
           {row}

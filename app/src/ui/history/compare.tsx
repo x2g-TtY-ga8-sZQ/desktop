@@ -246,6 +246,7 @@ export class CompareSidebar extends React.Component<
         onCreateTag={this.onCreateTag}
         onDeleteTag={this.onDeleteTag}
         onCherryPick={this.onCherryPick}
+        onDropCommitInsertion={this.onDropCommitInsertion}
         onSquash={this.onSquash}
         emptyListMessage={emptyListMessage}
         onCompareListScrolled={this.props.onCompareListScrolled}
@@ -259,6 +260,13 @@ export class CompareSidebar extends React.Component<
         disableSquashing={formState.kind === HistoryTabMode.Compare}
       />
     )
+  }
+
+  private onDropCommitInsertion = (
+    baseCommit: Commit | null,
+    commitsToInsert: ReadonlyArray<Commit>
+  ) => {
+    this.props.dispatcher.reorderCommits(commitsToInsert, baseCommit)
   }
 
   private onRenderCommitDragElement = (
