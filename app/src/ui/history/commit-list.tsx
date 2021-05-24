@@ -8,6 +8,7 @@ import { arrayEquals } from '../../lib/equality'
 import { Popover, PopoverCaretPosition } from '../lib/popover'
 import { Button } from '../lib/button'
 import { encodePathAsUrl } from '../../lib/path'
+import { DragType } from '../../models/drag-drop'
 
 const RowHeight = 50
 
@@ -81,6 +82,9 @@ interface ICommitListProps {
 
   /* Tags that haven't been pushed yet. This is used to show the unpushed indicator */
   readonly tagsToPush: ReadonlyArray<string> | null
+
+  /** Whether or not commits in this list can be reordered. */
+  readonly reorderingEnabled: boolean
 
   /* Whether or not the user has been introduced to cherry picking feature */
   readonly hasShownCherryPickIntro: boolean
@@ -318,6 +322,9 @@ export class CommitList extends React.Component<ICommitListProps, {}> {
           onSelectedRowChanged={this.onSelectedRowChanged}
           selectionMode="multi"
           onScroll={this.onScroll}
+          insertionDragType={
+            this.props.reorderingEnabled ? DragType.Commit : undefined
+          }
           invalidationProps={{
             commits: this.props.commitSHAs,
             localCommitSHAs: this.props.localCommitSHAs,

@@ -1,18 +1,25 @@
 import * as React from 'react'
 import { dragAndDropManager } from '../../../lib/drag-and-drop-manager'
+import { DragType } from '../../../models/drag-drop'
 
 export const ListInsertionPlaceholderHeight = 15
+
+enum InsertionFeedbackType {
+  None,
+  Top,
+  Bottom,
+}
 
 interface IListItemInsertionOverlayProps {
   readonly onInsertionPointChange: (index: number | null) => void
 
   readonly itemIndex: number
   readonly allowBottomInsertion: boolean
+  readonly dragType: DragType
 }
 
 interface IListItemInsertionOverlayState {
-  readonly showTopInsertionIndicator: boolean
-  readonly showBottomInsertionIndicator: boolean
+  readonly feedbackType: InsertionFeedbackType
 }
 
 /** A component which displays a single commit in a commit list. */
@@ -24,8 +31,7 @@ export class ListItemInsertionOverlay extends React.PureComponent<
     super(props)
 
     this.state = {
-      showTopInsertionIndicator: false,
-      showBottomInsertionIndicator: false,
+      feedbackType: InsertionFeedbackType.None,
     }
   }
 
@@ -74,10 +80,10 @@ export class ListItemInsertionOverlay extends React.PureComponent<
             height: ListInsertionPlaceholderHeight / 2,
           }}
         />
-        {this.state.showTopInsertionIndicator &&
+        {this.state.feedbackType === InsertionFeedbackType.Top &&
           this.renderInsertionIndicator(true)}
         {this.props.children}
-        {this.state.showBottomInsertionIndicator &&
+        {this.state.feedbackType === InsertionFeedbackType.Bottom &&
           this.props.allowBottomInsertion &&
           this.renderInsertionIndicator(false)}
         {this.props.allowBottomInsertion && (
@@ -91,7 +97,7 @@ export class ListItemInsertionOverlay extends React.PureComponent<
               right: 0,
               height:
                 ListInsertionPlaceholderHeight / 2 +
-                (this.state.showBottomInsertionIndicator
+                (this.state.feedbackType === InsertionFeedbackType.Bottom
                   ? ListInsertionPlaceholderHeight
                   : 0),
             }}
@@ -101,33 +107,40 @@ export class ListItemInsertionOverlay extends React.PureComponent<
     )
   }
 
-  private onTopInsertionAreaMouseEnter = (event: React.MouseEvent) => {
-    this.setState({
-      showTopInsertionIndicator: dragAndDropManager.isDragInProgress,
-    })
+  private isDragInProgress() {
+    return dragAndDropManager.isDragOfTypeInProgress(this.props.dragType)
+  }
 
-    if (dragAndDropManager.isDragInProgress) {
-      this.props.onInsertionPointChange(this.props.itemIndex)
-    }
+  private onTopInsertionAreaMouseEnter = (event: React.MouseEvent) => {
+    this.switchToInsertionFeedbackType(InsertionFeedbackType.Top)
   }
 
   private onTopInsertionAreaMouseLeave = (event: React.MouseEvent) => {
-    this.setState({ showTopInsertionIndicator: false })
-    this.props.onInsertionPointChange(null)
+    this.switchToInsertionFeedbackType(InsertionFeedbackType.None)
   }
 
   private onBottomInsertionAreaMouseEnter = (event: React.MouseEvent) => {
-    this.setState({
-      showBottomInsertionIndicator: dragAndDropManager.isDragInProgress,
-    })
-
-    if (dragAndDropManager.isDragInProgress) {
-      this.props.onInsertionPointChange(this.props.itemIndex)
-    }
+    this.switchToInsertionFeedbackType(InsertionFeedbackType.Bottom)
   }
 
   private onBottomInsertionAreaMouseLeave = (event: React.MouseEvent) => {
-    this.setState({ showBottomInsertionIndicator: false })
-    this.props.onInsertionPointChange(null)
+    this.switchToInsertionFeedbackType(InsertionFeedbackType.None)
+  }
+
+  private switchToInsertionFeedbackType(feedbackType: InsertionFeedbackType) {
+    if (
+      feedbackType !== InsertionFeedbackType.None &&
+      !this.isDragInProgress()
+    ) {
+      return
+    }
+
+    this.setState({ feedbackType })
+
+    if (feedbackType === InsertionFeedbackType.None) {
+      this.props.onInsertionPointChange(null)
+    } else if (this.isDragInProgress()) {
+      this.props.onInsertionPointChange(this.props.itemIndex)
+    }
   }
 }

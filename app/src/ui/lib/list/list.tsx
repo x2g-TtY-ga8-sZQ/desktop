@@ -19,6 +19,7 @@ import {
   ListInsertionPlaceholderHeight,
   ListItemInsertionOverlay,
 } from './list-item-insertion-overlay'
+import { DragData, DragType } from '../../../models/drag-drop'
 
 /**
  * Describe the first argument given to the cellRenderer,
@@ -178,6 +179,15 @@ interface IListProps {
   readonly onRowMouseDown?: (row: number, event: React.MouseEvent<any>) => void
 
   /**
+   * A handler called whenever the user drops items on the list to be inserted.
+   *
+   * @param row - The index of the row where the user intends to insert the new
+   *              items.
+   * @param data -  The data dropped by the user.
+   */
+  readonly onDropDataInsertion?: (row: number, data: DragData) => void
+
+  /**
    * An optional handler called to determine whether a given row is
    * selectable or not. Reasons for why a row might not be selectable
    * includes it being a group header or the item being disabled.
@@ -200,6 +210,9 @@ interface IListProps {
 
   /** Whether or not selection should follow pointer device */
   readonly selectOnHover?: boolean
+
+  /** Type of elements that can be inserted in the list via drag & drop. Optional. */
+  readonly insertionDragType?: DragType
 
   /**
    * Whether or not to explicitly move focus to a row if it was selected
@@ -830,15 +843,21 @@ export class List extends React.Component<IListProps, IListState> {
     // We only need to keep a reference to the focused element
     const ref = focused ? this.onFocusedItemRef : undefined
 
-    const element = (
-      <ListItemInsertionOverlay
-        onInsertionPointChange={this.onInsertionPointChange}
-        itemIndex={rowIndex}
-        allowBottomInsertion={true} //rowIndex === this.props.rowCount - 1}
-      >
-        {this.props.rowRenderer(rowIndex)}
-      </ListItemInsertionOverlay>
-    )
+    const row = this.props.rowRenderer(rowIndex)
+
+    const element =
+      this.props.insertionDragType !== undefined ? (
+        <ListItemInsertionOverlay
+          onInsertionPointChange={this.onInsertionPointChange}
+          itemIndex={rowIndex}
+          allowBottomInsertion={true}
+          dragType={this.props.insertionDragType}
+        >
+          {row}
+        </ListItemInsertionOverlay>
+      ) : (
+        row
+      )
 
     const id = this.state.rowIdPrefix
       ? `${this.state.rowIdPrefix}-${rowIndex}`

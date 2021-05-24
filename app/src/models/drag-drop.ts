@@ -29,6 +29,7 @@ export type DragElement = {
 export enum DropTargetType {
   Branch,
   Commit,
+  ListInsertionPoint,
 }
 
 export enum DropTargetSelector {
@@ -46,8 +47,14 @@ export type CommitTarget = {
   type: DropTargetType.Commit
 }
 
+export type ListInsertionPointTarget = {
+  type: DropTargetType.ListInsertionPoint
+  data: DragData
+  index: number
+}
+
 /**
  * This is a type is used in conjunction with the drag and drop manager to
  * pass information about a drop target.
  */
-export type DropTarget = BranchTarget | CommitTarget
+export type DropTarget = BranchTarget | CommitTarget | ListInsertionPointTarget
