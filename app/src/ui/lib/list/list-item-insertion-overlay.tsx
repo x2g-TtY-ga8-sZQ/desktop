@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { dragAndDropManager } from '../../../lib/drag-and-drop-manager'
-import { DragType } from '../../../models/drag-drop'
+import { DragType, DropTargetType } from '../../../models/drag-drop'
 
 export const ListInsertionPlaceholderHeight = 15
 
@@ -38,6 +38,7 @@ export class ListItemInsertionOverlay extends React.PureComponent<
   public renderInsertionIndicator(isTop: boolean) {
     return (
       <div
+        className="list-insertion-point"
         onMouseEnter={
           isTop
             ? this.onTopInsertionAreaMouseEnter
@@ -70,6 +71,7 @@ export class ListItemInsertionOverlay extends React.PureComponent<
         }}
       >
         <div
+          className="list-insertion-point"
           onMouseEnter={this.onTopInsertionAreaMouseEnter}
           onMouseLeave={this.onTopInsertionAreaMouseLeave}
           style={{
@@ -88,6 +90,7 @@ export class ListItemInsertionOverlay extends React.PureComponent<
           this.renderInsertionIndicator(false)}
         {this.props.allowBottomInsertion && (
           <div
+            className="list-insertion-point"
             onMouseEnter={this.onBottomInsertionAreaMouseEnter}
             onMouseLeave={this.onBottomInsertionAreaMouseLeave}
             style={{
@@ -139,7 +142,15 @@ export class ListItemInsertionOverlay extends React.PureComponent<
 
     if (feedbackType === InsertionFeedbackType.None) {
       this.props.onInsertionPointChange(null)
+      dragAndDropManager.emitLeaveDropTarget()
     } else if (this.isDragInProgress()) {
+      if (dragAndDropManager.dragData !== null) {
+        dragAndDropManager.emitEnterDropTarget({
+          type: DropTargetType.ListInsertionPoint,
+          data: dragAndDropManager.dragData,
+          index: this.props.itemIndex,
+        })
+      }
       this.props.onInsertionPointChange(this.props.itemIndex)
     }
   }

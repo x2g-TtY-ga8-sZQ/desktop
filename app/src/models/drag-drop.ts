@@ -36,6 +36,7 @@ export enum DropTargetSelector {
   Branch = '.branches-list-item',
   PullRequest = '.pull-request-item',
   Commit = '.commit',
+  ListInsertionPoint = '.list-insertion-point',
 }
 
 export type BranchTarget = {

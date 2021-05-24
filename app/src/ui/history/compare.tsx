@@ -30,6 +30,7 @@ import { PopupType } from '../../models/popup'
 import { getUniqueCoauthorsAsAuthors } from '../../lib/unique-coauthors-as-authors'
 import { getSquashedCommitDescription } from '../../lib/squash/squashed-commit-description'
 import { doMergeCommitsExistAfterCommit } from '../../lib/git'
+import { enableCommitReordering } from '../../lib/feature-flag'
 interface ICompareSidebarProps {
   readonly repository: Repository
   readonly isLocalRepository: boolean
@@ -230,7 +231,9 @@ export class CompareSidebar extends React.Component<
         selectedSHAs={this.props.selectedCommitShas}
         localCommitSHAs={this.props.localCommitSHAs}
         emoji={this.props.emoji}
-        reorderingEnabled={formState.kind === HistoryTabMode.History}
+        reorderingEnabled={
+          enableCommitReordering() && formState.kind === HistoryTabMode.History
+        }
         onViewCommitOnGitHub={this.props.onViewCommitOnGitHub}
         onRevertCommit={
           ableToRevertCommit(this.props.compareState.formState)
