@@ -2,7 +2,7 @@ import * as React from 'react'
 import { dragAndDropManager } from '../../../lib/drag-and-drop-manager'
 import { DragData, DragType, DropTargetType } from '../../../models/drag-drop'
 
-export const ListInsertionPlaceholderHeight = 15
+const ListInsertionAreaHeight = 15
 
 enum InsertionFeedbackType {
   None,
@@ -11,7 +11,6 @@ enum InsertionFeedbackType {
 }
 
 interface IListItemInsertionOverlayProps {
-  readonly onInsertionPointChange: (index: number | null) => void
   readonly onDropDataInsertion?: (
     insertionIndex: number,
     data: DragData
@@ -39,20 +38,40 @@ export class ListItemInsertionOverlay extends React.PureComponent<
   }
 
   public renderInsertionIndicator(feedbackType: InsertionFeedbackType) {
+    const isTop = feedbackType === InsertionFeedbackType.Top
+
     return (
-      <div
-        className="list-insertion-point"
-        onMouseEnter={this.getOnInsertionAreaMouseEnter(feedbackType)}
-        onMouseLeave={this.onInsertionAreaMouseLeave}
-        onMouseUp={this.onInsertionAreaMouseUp}
-        style={{
-          width: '100%',
-          height: ListInsertionPlaceholderHeight,
-          flexShrink: 0,
-          backgroundColor: 'lightgray',
-          zIndex: 1,
-        }}
-      />
+      <>
+        <div
+          style={{
+            pointerEvents: 'none',
+            position: 'absolute',
+            top: isTop ? -1 : undefined,
+            left: 10,
+            right: 0,
+            bottom: isTop ? undefined : -1,
+            height: '2px',
+            backgroundColor: 'var(--focus-color)',
+            zIndex: 1,
+          }}
+        />
+        <div
+          style={{
+            pointerEvents: 'none',
+            position: 'absolute',
+            top: isTop ? -5 : undefined,
+            left: 0,
+            bottom: isTop ? undefined : -5,
+            width: '10px',
+            height: '10px',
+            borderColor: 'var(--focus-color)',
+            borderRadius: '50%',
+            borderStyle: 'solid',
+            borderWidth: '2px',
+            zIndex: 1,
+          }}
+        />
+      </>
     )
   }
 
@@ -78,7 +97,7 @@ export class ListItemInsertionOverlay extends React.PureComponent<
             top: 0,
             left: 0,
             right: 0,
-            height: ListInsertionPlaceholderHeight / 2,
+            height: ListInsertionAreaHeight,
           }}
         />
         {this.state.feedbackType === InsertionFeedbackType.Top &&
@@ -98,11 +117,7 @@ export class ListItemInsertionOverlay extends React.PureComponent<
             bottom: 0,
             left: 0,
             right: 0,
-            height:
-              ListInsertionPlaceholderHeight / 2 +
-              (this.state.feedbackType === InsertionFeedbackType.Bottom
-                ? ListInsertionPlaceholderHeight
-                : 0),
+            height: ListInsertionAreaHeight,
           }}
         />
       </div>
@@ -131,20 +146,21 @@ export class ListItemInsertionOverlay extends React.PureComponent<
       return
     }
 
+    console.log(feedbackType, this.props.itemIndex)
+
     this.setState({ feedbackType })
 
     if (feedbackType === InsertionFeedbackType.None) {
-      this.props.onInsertionPointChange(null)
       dragAndDropManager.emitLeaveDropTarget()
-    } else if (this.isDragInProgress()) {
-      if (dragAndDropManager.dragData !== null) {
-        dragAndDropManager.emitEnterDropTarget({
-          type: DropTargetType.ListInsertionPoint,
-          data: dragAndDropManager.dragData,
-          index: this.props.itemIndex,
-        })
-      }
-      this.props.onInsertionPointChange(this.props.itemIndex)
+    } else if (
+      this.isDragInProgress() &&
+      dragAndDropManager.dragData !== null
+    ) {
+      dragAndDropManager.emitEnterDropTarget({
+        type: DropTargetType.ListInsertionPoint,
+        data: dragAndDropManager.dragData,
+        index: this.props.itemIndex,
+      })
     }
   }
 

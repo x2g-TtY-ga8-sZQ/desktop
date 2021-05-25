@@ -1,6 +1,6 @@
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
-import { Grid, AutoSizer, Index } from 'react-virtualized'
+import { Grid, AutoSizer } from 'react-virtualized'
 import { shallowEquals, arrayEquals } from '../../../lib/equality'
 import { FocusContainer } from '../../lib/focus-container'
 import { ListRow } from './list-row'
@@ -15,10 +15,7 @@ import {
 } from './selection'
 import { createUniqueId, releaseUniqueId } from '../../lib/id-pool'
 import { range } from '../../../lib/range'
-import {
-  ListInsertionPlaceholderHeight,
-  ListItemInsertionOverlay,
-} from './list-item-insertion-overlay'
+import { ListItemInsertionOverlay } from './list-item-insertion-overlay'
 import { DragData, DragType } from '../../../models/drag-drop'
 
 /**
@@ -238,8 +235,6 @@ interface IListState {
   readonly width?: number
 
   readonly rowIdPrefix?: string
-
-  readonly insertionIndex: number | null
 }
 
 /**
@@ -286,9 +281,7 @@ export class List extends React.Component<IListProps, IListState> {
   public constructor(props: IListProps) {
     super(props)
 
-    this.state = {
-      insertionIndex: null,
-    }
+    this.state = {}
 
     const ResizeObserverClass: typeof ResizeObserver = (window as any)
       .ResizeObserver
@@ -481,19 +474,9 @@ export class List extends React.Component<IListProps, IListState> {
     return this.findNextPageSelectableRow(lastSelection, direction)
   }
 
-  private getRowHeight = (index: number) => {
+  private getRowHeight(index: number) {
     const { rowHeight } = this.props
     return typeof rowHeight === 'number' ? rowHeight : rowHeight({ index })
-  }
-
-  private rowHeight = (params: Index) => {
-    const height = this.getRowHeight(params.index)
-
-    if (params.index === this.state.insertionIndex) {
-      return height + ListInsertionPlaceholderHeight
-    }
-
-    return height
   }
 
   private findNextPageSelectableRow(
@@ -760,9 +743,7 @@ export class List extends React.Component<IListProps, IListState> {
       const gridHasUpdatedAlready =
         this.props.rowCount !== prevProps.rowCount ||
         this.state.width !== prevState.width ||
-        this.state.height !==
-          prevState.height /*||
-        this.state.insertionIndex !== prevState.insertionIndex*/
+        this.state.height !== prevState.height
 
       if (!gridHasUpdatedAlready) {
         const selectedRowChanged = !arrayEquals(
@@ -780,11 +761,7 @@ export class List extends React.Component<IListProps, IListState> {
         // our selectedRow and invalidationProps down to Grid and figured that
         // it, being a pure component, would do the right thing but that's not
         // quite the case since invalidationProps is a complex object.
-        if (
-          selectedRowChanged ||
-          invalidationPropsChanged /*||
-          this.state.insertionIndex !== prevState.insertionIndex*/
-        ) {
+        if (selectedRowChanged || invalidationPropsChanged) {
           this.grid.forceUpdate()
         }
       }
@@ -818,16 +795,6 @@ export class List extends React.Component<IListProps, IListState> {
     this.focusRow = -1
   }
 
-  private onInsertionPointChange = (index: number | null) => {
-    this.setState({
-      insertionIndex: index,
-    })
-
-    if (this.grid !== null) {
-      this.grid.recomputeGridSize({ rowIndex: index ?? 0 })
-    }
-  }
-
   private renderRow = (params: IRowRendererParams) => {
     const rowIndex = params.rowIndex
     const selectable = this.canSelectRow(rowIndex)
@@ -848,7 +815,6 @@ export class List extends React.Component<IListProps, IListState> {
     const element =
       this.props.insertionDragType !== undefined ? (
         <ListItemInsertionOverlay
-          onInsertionPointChange={this.onInsertionPointChange}
           onDropDataInsertion={this.props.onDropDataInsertion}
           itemIndex={rowIndex}
           dragType={this.props.insertionDragType}
@@ -986,7 +952,7 @@ export class List extends React.Component<IListProps, IListState> {
           columnWidth={width}
           columnCount={1}
           rowCount={this.props.rowCount}
-          rowHeight={this.rowHeight}
+          rowHeight={this.props.rowHeight}
           cellRenderer={this.renderRow}
           onScroll={this.onScroll}
           scrollTop={this.props.setScrollTop}
