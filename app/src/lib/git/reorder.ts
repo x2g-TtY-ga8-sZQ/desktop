@@ -1,6 +1,6 @@
 import * as FSE from 'fs-extra'
 import { getCommits, revRange } from '.'
-import { CommitOneLine } from '../../models/commit'
+import { Commit } from '../../models/commit'
 import { MultiCommitOperationKind } from '../../models/multi-commit-operation'
 import { IMultiCommitOperationProgress } from '../../models/progress'
 import { Repository } from '../../models/repository'
@@ -33,8 +33,8 @@ import { rebaseInteractive, RebaseResult } from './rebase'
  */
 export async function reorder(
   repository: Repository,
-  toMove: ReadonlyArray<CommitOneLine>,
-  afterCommit: CommitOneLine | null,
+  toMove: ReadonlyArray<Commit>,
+  afterCommit: Commit | null,
   lastRetainedCommitRef: string | null,
   progressCallback?: (progress: IMultiCommitOperationProgress) => void
 ): Promise<RebaseResult> {
@@ -139,8 +139,6 @@ export async function reorder(
         '[reorder] The commit to squash onto was not in the log. Continuing would result in dropping the commits in the toMove array.'
       )
     }
-
-    console.log(await (await FSE.readFile(todoPath)).toString('utf-8'))
 
     result = await rebaseInteractive(
       repository,

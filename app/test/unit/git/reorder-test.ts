@@ -2,17 +2,15 @@ import * as FSE from 'fs-extra'
 import * as Path from 'path'
 import {
   continueRebase,
-  getChangedFiles,
   getCommit,
   getCommits,
   getRebaseInternalState,
   RebaseResult,
 } from '../../../src/lib/git'
-import { CommitOneLine } from '../../../src/models/commit'
+import { Commit } from '../../../src/models/commit'
 import { Repository } from '../../../src/models/repository'
 import { setupEmptyRepositoryDefaultMain } from '../../helpers/repositories'
 import { makeCommit } from '../../helpers/repository-scaffolding'
-import { squash } from '../../../src/lib/git/squash'
 import { GitProcess } from 'dugite'
 import { getStatusOrThrow } from '../../helpers/status'
 import { getTempFilePath } from '../../../src/lib/file-system'
@@ -20,7 +18,7 @@ import { reorder } from '../../../src/lib/git/reorder'
 
 describe('git/reorder', () => {
   let repository: Repository
-  let initialCommit: CommitOneLine
+  let initialCommit: Commit
 
   beforeEach(async () => {
     repository = await setupEmptyRepositoryDefaultMain()
@@ -47,7 +45,7 @@ describe('git/reorder', () => {
     expect(log[0].summary).toBe('first')
   })
 
-  it('moves first and fourth commits after the second one', async () => {
+  it('moves first and fourth commits after the second one respecting their order in the log', async () => {
     const firstCommit = await makeSampleCommit(repository, 'first')
     const secondCommit = await makeSampleCommit(repository, 'second')
     await makeSampleCommit(repository, 'third')
@@ -55,7 +53,7 @@ describe('git/reorder', () => {
 
     const result = await reorder(
       repository,
-      [firstCommit, fourthCommit],
+      [fourthCommit, firstCommit], // provided in opposite log order
       secondCommit,
       initialCommit.sha
     )
@@ -101,133 +99,22 @@ describe('git/reorder', () => {
     ])
   })
 
-  /*
-  it('returns error when squashOnto is in the toSquash array', async () => {
-    const firstCommit = await makeSampleCommit(repository, 'first')
-    const secondCommit = await makeSampleCommit(repository, 'second')
-
-    const result = await squash(
-      repository,
-      [firstCommit, secondCommit],
-      firstCommit,
-      initialCommit.sha,
-      'Test Summary\n\nTest Body'
-    )
-
-    expect(result).toBe(RebaseResult.Error)
-  })
-
-  it('squashes multiple commit onto one (non-conflicting)', async () => {
-    const firstCommit = await makeSampleCommit(repository, 'first')
-    const secondCommit = await makeSampleCommit(repository, 'second')
-    const thirdCommit = await makeSampleCommit(repository, 'third')
-    const fourthCommit = await makeSampleCommit(repository, 'fourth')
-
-    const result = await squash(
-      repository,
-      [secondCommit, thirdCommit, fourthCommit],
-      firstCommit,
-      initialCommit.sha,
-      'Test Summary\n\nTest Body'
-    )
-
-    expect(result).toBe(RebaseResult.CompletedWithoutError)
-
-    const log = await getCommits(repository, 'HEAD', 5)
-    const squashed = log[0]
-    expect(squashed.summary).toBe('Test Summary')
-    expect(squashed.body).toBe('Test Body\n')
-    expect(log.length).toBe(2)
-
-    // verify squashed commit contains changes from squashed commits
-    const squashedFiles = await getChangedFiles(repository, squashed.sha)
-    const squashedFilePaths = squashedFiles.map(f => f.path).join(' ')
-    expect(squashedFilePaths).toContain('first.md')
-    expect(squashedFilePaths).toContain('second.md')
-    expect(squashedFilePaths).toContain('third.md')
-    expect(squashedFilePaths).toContain('fourth.md')
-  })
-
-  it('squashes using the root of the branch if last retained commit is null', async () => {
-    const firstCommit = await makeSampleCommit(repository, 'first')
-    const secondCommit = await makeSampleCommit(repository, 'second')
-
-    let log = await getCommits(repository, 'HEAD', 5)
-    expect(log.length).toBe(3)
-
-    const result = await squash(
-      repository,
-      [firstCommit, secondCommit],
-      initialCommit, // first in branch (root) commit.
-      null,
-      'Test Summary\n\nTest Body'
-    )
-
-    expect(result).toBe(RebaseResult.CompletedWithoutError)
-
-    log = await getCommits(repository, 'HEAD', 5)
-    const squashed = log[0]
-    expect(squashed.summary).toBe('Test Summary')
-    expect(squashed.body).toBe('Test Body\n')
-    expect(log.length).toBe(1)
-
-    // verify squashed commit contains changes from squashed commits
-    const squashedFiles = await getChangedFiles(repository, squashed.sha)
-    const squashedFilePaths = squashedFiles.map(f => f.path).join(' ')
-    expect(squashedFilePaths).toContain('initialize')
-    expect(squashedFilePaths).toContain('first.md')
-    expect(squashedFilePaths).toContain('second.md')
-  })
-
-  it('squashes multiple commit non-sequential commits (reorders, non-conflicting)', async () => {
+  it('reorders using the root of the branch if last retained commit is null', async () => {
     const firstCommit = await makeSampleCommit(repository, 'first')
     await makeSampleCommit(repository, 'second')
-    const thirdCommit = await makeSampleCommit(repository, 'third')
-    await makeSampleCommit(repository, 'fourth')
-    const fifthCommit = await makeSampleCommit(repository, 'fifth')
 
-    // From oldest to newest, log looks like:
-    // - initial commit
-    // - 'first' commit
-    // - 'second' commit
-    // - 'third' commit
-    // - 'fourth' commit
-    // - 'fifth' commit
-
-    // Squashing 'first' and 'fifth' onto 'third'
-    // Thus, reordering to 'second', 'first - third - fifth', 'fourth'
-    const result = await squash(
-      repository,
-      [fifthCommit, firstCommit], // provided in opposite log order
-      thirdCommit,
-      initialCommit.sha,
-      ''
-    )
+    const result = await reorder(repository, [firstCommit], initialCommit, null)
 
     expect(result).toBe(RebaseResult.CompletedWithoutError)
 
-    // From oldest to newest, log should look like:
-    // - initial commit - log[2]
-    // - the squashed commit 'first third fifth` - order by log history
-    // - 'fourth' commit - log[0]
     const log = await getCommits(repository, 'HEAD', 5)
-    const squashed = log[1]
-    expect(squashed.summary).toBe('first')
-    expect(squashed.body).toBe('third\n\nfifth\n')
-    expect(log[0].summary).toBe('fourth')
-    expect(log.length).toBe(4)
+    expect(log.length).toBe(3)
 
-    // verify squashed commit contains changes from squashed commits
-    const squashedFiles = await getChangedFiles(repository, squashed.sha)
-    const squashedFilePaths = squashedFiles.map(f => f.path).join(' ')
-    expect(squashedFilePaths).toContain('first.md')
-    expect(squashedFilePaths).toContain('third.md')
-    expect(squashedFilePaths).toContain('fifth.md')
-    expect(squashedFilePaths).not.toContain('second.md')
-    expect(squashedFilePaths).not.toContain('fourth.md')
+    const summaries = log.map(c => c.summary)
+    expect(summaries).toStrictEqual(['second', 'first', 'initialize'])
   })
 
-  it('handles squashing a conflicting commit', async () => {
+  it('handles reordering a conflicting commit', async () => {
     const firstCommit = await makeSampleCommit(repository, 'first')
 
     // make a commit with a commit message 'second' and adding file 'second.md'
@@ -236,15 +123,14 @@ describe('git/reorder', () => {
     // make a third commit modifying 'second.md' from secondCommit
     const thirdCommit = await makeSampleCommit(repository, 'third', 'second')
 
-    // squash third commit onto first commit
+    // move third commit after first commit
     // Will cause a conflict due to modifications to 'second.md'  - a file that
     // does not exist in the first commit.
-    const result = await squash(
+    const result = await reorder(
       repository,
       [thirdCommit],
       firstCommit,
-      initialCommit.sha,
-      'Test Summary\n\nTest Body'
+      initialCommit.sha
     )
 
     expect(result).toBe(RebaseResult.ConflictsEncountered)
@@ -260,8 +146,8 @@ describe('git/reorder', () => {
 
     // If there are conflicts, we need to resend in git editor for changing the
     // git message on continue
-    const messagePath = await getTempFilePath('squashCommitMessage')
-    await FSE.writeFile(messagePath, 'Test Summary\n\nTest Body')
+    const thirdMessagePath = await getTempFilePath('reorderCommitMessage-third')
+    await FSE.writeFile(thirdMessagePath, 'third - fixed')
 
     // continue rebase
     let continueResult = await continueRebase(
@@ -269,12 +155,12 @@ describe('git/reorder', () => {
       files,
       undefined,
       undefined,
-      `cat "${messagePath}" >`
+      `cat "${thirdMessagePath}" >`
     )
 
-    // This will now conflict with the 'second' commit since it is going to now
-    // apply the second commit which now modifies the same lines in the
-    // 'second.md' that the squashed first commit does.
+    // This will now conflict with the 'third' commit since it is going to now
+    // apply the 'second' commit which now modifies the same lines in the
+    // 'second.md' that the previous commit does.
     expect(continueResult).toBe(RebaseResult.ConflictsEncountered)
 
     status = await getStatusOrThrow(repository)
@@ -282,66 +168,42 @@ describe('git/reorder', () => {
 
     await FSE.writeFile(
       Path.join(repository.path, 'second.md'),
-      '# resolve conflict from adding add after resolving squash'
+      '# resolve conflict from putting "third" before "second"'
     )
+
+    const secondMessagePath = await getTempFilePath(
+      'reorderCommitMessage-second'
+    )
+    await FSE.writeFile(secondMessagePath, 'second - fixed')
 
     continueResult = await continueRebase(
       repository,
       files,
       undefined,
       undefined,
-      // Only reason I did this here is to show it does not cause harm.
-      // In case of multiple commits being squashed/reordered before the squash
-      // completes, we may not be able to tell which conflict the squash
-      // message will need to go after so we will be sending it on all
-      // continues.
-      `cat "${messagePath}" >`
+      `cat "${secondMessagePath}" >`
     )
     expect(continueResult).toBe(RebaseResult.CompletedWithoutError)
 
     const log = await getCommits(repository, 'HEAD', 5)
-    expect(log.length).toBe(3)
-    const squashed = log[1]
-    expect(squashed.summary).toBe('Test Summary')
-    expect(squashed.body).toBe('Test Body\n')
-
-    // verify squashed commit contains changes from squashed commits
-    const squashedFiles = await getChangedFiles(repository, squashed.sha)
-    const squashedFilePaths = squashedFiles.map(f => f.path).join(' ')
-    expect(squashedFilePaths).toContain('first.md')
-    expect(squashedFilePaths).toContain('second.md')
-  })
-
-  it('squashes with default merged commit message/description if commit message not provided', async () => {
-    const firstCommit = await makeSampleCommit(repository, 'first')
-    const secondCommit = await makeSampleCommit(repository, 'second')
-
-    const result = await squash(
-      repository,
-      [secondCommit],
-      firstCommit,
-      initialCommit.sha,
-      ''
-    )
-    expect(result).toBe(RebaseResult.CompletedWithoutError)
-
-    const log = await getCommits(repository, 'HEAD', 5)
-    const squashed = log[0]
-    expect(squashed.summary).toBe('first')
-    expect(squashed.body).toBe('second\n')
-    expect(log.length).toBe(2)
+    const summaries = log.map(c => c.summary)
+    expect(summaries).toStrictEqual([
+      'second - fixed',
+      'third - fixed',
+      'first',
+      'initialize',
+    ])
   })
 
   it('returns error on invalid lastRetainedCommitRef', async () => {
     const firstCommit = await makeSampleCommit(repository, 'first')
     const secondCommit = await makeSampleCommit(repository, 'second')
 
-    const result = await squash(
+    const result = await reorder(
       repository,
       [secondCommit],
       firstCommit,
-      'INVALID INVALID',
-      'Test Summary\n\nTest Body'
+      'INVALID INVALID'
     )
 
     expect(result).toBe(RebaseResult.Error)
@@ -350,19 +212,19 @@ describe('git/reorder', () => {
     // todo and then interactive rebase would fail for bad revision. Added logic
     // to short circuit to prevent unnecessary attempt at an interactive rebase.
     const isRebaseStillOngoing = await getRebaseInternalState(repository)
-    expect(isRebaseStillOngoing !== null).toBeFalse()
+    expect(isRebaseStillOngoing).toBeNull()
   })
 
-  it('returns error on invalid commit to squashOnto', async () => {
+  it('returns error on invalid base commit', async () => {
     await makeSampleCommit(repository, 'first')
     const secondCommit = await makeSampleCommit(repository, 'second')
 
-    const result = await squash(
+    const badCommit = { ...secondCommit, sha: 'INVALID', summary: 'INVALID' }
+    const result = await reorder(
       repository,
       [secondCommit],
-      { sha: 'INVALID', summary: 'INVALID' },
-      initialCommit.sha,
-      'Test Summary\n\nTest Body'
+      badCommit,
+      initialCommit.sha
     )
 
     expect(result).toBe(RebaseResult.Error)
@@ -370,37 +232,30 @@ describe('git/reorder', () => {
     // Rebase should not start - if we did attempt this, it could result in
     // dropping commits.
     const isRebaseStillOngoing = await getRebaseInternalState(repository)
-    expect(isRebaseStillOngoing !== null).toBeFalse()
+    expect(isRebaseStillOngoing).toBeNull()
   })
 
-  it('returns error on empty toSquash', async () => {
+  it('returns error when no commits are reordered', async () => {
     const first = await makeSampleCommit(repository, 'first')
     await makeSampleCommit(repository, 'second')
 
-    const result = await squash(
-      repository,
-      [],
-      first,
-      initialCommit.sha,
-      'Test Summary\n\nTest Body'
-    )
+    const result = await reorder(repository, [], first, initialCommit.sha)
 
     expect(result).toBe(RebaseResult.Error)
 
     // Rebase should not start - technically there would be no harm in this
-    // rebase as it would just replay history, but we should not use squash to
+    // rebase as it would just replay history, but we should not use reorder to
     // replay history.
     const isRebaseStillOngoing = await getRebaseInternalState(repository)
-    expect(isRebaseStillOngoing !== null).toBeFalse()
+    expect(isRebaseStillOngoing).toBeNull()
   })
-  */
 })
 
 async function makeSampleCommit(
   repository: Repository,
   desc: string,
   file?: string
-): Promise<CommitOneLine> {
+): Promise<Commit> {
   file = file || desc
   const commitTree = {
     commitMessage: desc,
