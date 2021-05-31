@@ -52,10 +52,9 @@ export class CommitDragElement extends React.Component<
 
       this.clearTimeout()
 
-      this.timeoutId = window.setTimeout(
-        () => this.setState({ showTooltip: true }),
-        time
-      )
+      this.timeoutId = window.setTimeout(() => {
+        this.setState({ showTooltip: true })
+      }, time)
     } else {
       this.setState({ showTooltip: true })
     }
