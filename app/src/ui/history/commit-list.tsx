@@ -68,7 +68,8 @@ interface ICommitListProps {
    */
   readonly onDropCommitInsertion?: (
     baseCommit: Commit | null,
-    commitsToInsert: ReadonlyArray<Commit>
+    commitsToInsert: ReadonlyArray<Commit>,
+    lastRetainedCommitRef: string | null
   ) => void
 
   /** Callback to fire to cherry picking the commit  */
@@ -189,17 +190,25 @@ export class CommitList extends React.Component<ICommitListProps, {}> {
     )
   }
 
-  private onSquash = (toSquash: ReadonlyArray<Commit>, squashOnto: Commit) => {
-    const indexes = [...toSquash, squashOnto].map(v =>
-      this.props.commitSHAs.findIndex(sha => sha === v.sha)
-    )
+  private getLastRetainedCommitRef(indexes: ReadonlyArray<number>) {
     const maxIndex = Math.max(...indexes)
     const lastIndex = this.props.commitSHAs.length - 1
     /* If the commit is the first commit in the branch, you cannot reference it
     using the sha */
     const lastRetainedCommitRef =
       maxIndex !== lastIndex ? `${this.props.commitSHAs[maxIndex]}^` : null
-    this.props.onSquash(toSquash, squashOnto, lastRetainedCommitRef)
+    return lastRetainedCommitRef
+  }
+
+  private onSquash = (toSquash: ReadonlyArray<Commit>, squashOnto: Commit) => {
+    const indexes = [...toSquash, squashOnto].map(v =>
+      this.props.commitSHAs.findIndex(sha => sha === v.sha)
+    )
+    this.props.onSquash(
+      toSquash,
+      squashOnto,
+      this.getLastRetainedCommitRef(indexes)
+    )
   }
 
   private onRenderCommitDragElement = (commit: Commit) => {
@@ -364,7 +373,15 @@ export class CommitList extends React.Component<ICommitListProps, {}> {
       row < this.props.commitSHAs.length ? this.props.commitSHAs[row] : null
     const baseCommit =
       baseCommitSHA !== null ? this.props.commitLookup.get(baseCommitSHA) : null
-    this.props.onDropCommitInsertion(baseCommit ?? null, data.commits)
+    const indexes = [...data.commits, baseCommit]
+      .filter((v): v is Commit => v !== null && v !== undefined)
+      .map(v => this.props.commitSHAs.findIndex(sha => sha === v.sha))
+
+    this.props.onDropCommitInsertion(
+      baseCommit ?? null,
+      data.commits,
+      this.getLastRetainedCommitRef(indexes)
+    )
   }
 }
 

@@ -264,9 +264,15 @@ export class CompareSidebar extends React.Component<
 
   private onDropCommitInsertion = (
     baseCommit: Commit | null,
-    commitsToInsert: ReadonlyArray<Commit>
+    commitsToInsert: ReadonlyArray<Commit>,
+    lastRetainedCommitRef: string | null
   ) => {
-    this.props.dispatcher.reorderCommits(commitsToInsert, baseCommit)
+    this.props.dispatcher.reorderCommits(
+      this.props.repository,
+      commitsToInsert,
+      baseCommit,
+      lastRetainedCommitRef
+    )
   }
 
   private onRenderCommitDragElement = (

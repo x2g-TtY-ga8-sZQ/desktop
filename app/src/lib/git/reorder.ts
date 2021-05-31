@@ -24,7 +24,7 @@ import { rebaseInteractive, RebaseResult } from './rebase'
  * A.
  *
  * @param toMove - commits to move
- * @param afterCommit  - commits will be moved right before this commit. If it's
+ * @param beforeCommit  - commits will be moved right before this commit. If it's
  * null, the commits will be moved to the end of the history.
  * @param lastRetainedCommitRef - sha of commit before commits in squash or null
  * if commit to be squash is the root (first in history) of the branch
@@ -34,7 +34,7 @@ import { rebaseInteractive, RebaseResult } from './rebase'
 export async function reorder(
   repository: Repository,
   toMove: ReadonlyArray<Commit>,
-  afterCommit: Commit | null,
+  beforeCommit: Commit | null,
   lastRetainedCommitRef: string | null,
   progressCallback?: (progress: IMultiCommitOperationProgress) => void
 ): Promise<RebaseResult> {
@@ -90,7 +90,7 @@ export async function reorder(
 
       // If it's the base commit, replay to the toMove in the order they
       // appeared on the log to reduce potential conflicts.
-      if (afterCommit !== null && commit.sha === afterCommit.sha) {
+      if (beforeCommit !== null && commit.sha === beforeCommit.sha) {
         foundBaseCommitInLog = true
         toReplayBeforeBaseCommit.unshift(commit)
 
@@ -127,7 +127,7 @@ export async function reorder(
       }
     }
 
-    if (afterCommit === null) {
+    if (beforeCommit === null) {
       for (let i = 0; i < toReplayBeforeBaseCommit.length; i++) {
         await FSE.appendFile(
           todoPath,

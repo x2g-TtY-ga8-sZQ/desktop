@@ -3074,14 +3074,52 @@ export class Dispatcher {
   }
 
   public async reorderCommits(
+    repository: Repository,
     commitsToReorder: ReadonlyArray<Commit>,
-    beforeCommit: Commit | null
+    beforeCommit: Commit | null,
+    lastRetainedCommitRef: string | null
   ) {
-    console.log(
-      `Moving ${JSON.stringify(
-        commitsToReorder.map(c => c.summary)
-      )} before ${JSON.stringify(beforeCommit && beforeCommit.summary)}`
+    const stateBefore = this.repositoryStateManager.get(repository)
+    const { tip } = stateBefore.branchesState
+
+    if (tip.kind !== TipState.Valid) {
+      log.info(`[reorder] - invalid tip state - could not perform reorder.`)
+      return
+    }
+
+    this.appStore._initializeMultiCommitOperation(
+      repository,
+      {
+        kind: MultiCommitOperationKind.Reorder,
+        beforeCommit,
+        lastRetainedCommitRef,
+      },
+      tip.branch,
+      commitsToReorder
     )
+
+    this.showPopup({
+      type: PopupType.MultiCommitOperation,
+      repository,
+    })
+
+    // this.appStore._setSquashUndoState(repository, tip)
+
+    /*const result = */ await this.appStore._reorderCommits(
+      repository,
+      commitsToReorder,
+      beforeCommit,
+      lastRetainedCommitRef
+    )
+
+    // this.logHowToRevertSquash(tip)
+
+    // this.processSquashRebaseResult(
+    //   repository,
+    //   result,
+    //   toSquash,
+    //   tip.branch.name
+    // )
   }
 
   /**

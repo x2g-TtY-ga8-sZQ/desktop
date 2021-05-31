@@ -146,8 +146,6 @@ export class ListItemInsertionOverlay extends React.PureComponent<
       return
     }
 
-    console.log(feedbackType, this.props.itemIndex)
-
     this.setState({ feedbackType })
 
     if (feedbackType === InsertionFeedbackType.None) {

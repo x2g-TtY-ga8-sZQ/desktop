@@ -290,6 +290,7 @@ import {
   MultiCommitOperationStep,
   MultiCommitOperationStepKind,
 } from '../../models/multi-commit-operation'
+import { reorder } from '../git/reorder'
 
 const LastSelectedRepositoryIDKey = 'last-selected-repository-id'
 
@@ -6340,6 +6341,43 @@ export class AppStore extends TypedBaseStore<IAppState> {
     this.lastThankYou = lastThankYou
 
     this.emitUpdate()
+  }
+
+  /** This shouldn't be called directly. See `Dispatcher`. */
+  public async _reorderCommits(
+    repository: Repository,
+    commitsToReorder: ReadonlyArray<Commit>,
+    beforeCommit: Commit | null,
+    lastRetainedCommitRef: string | null
+  ): Promise<RebaseResult> {
+    if (commitsToReorder.length === 0) {
+      log.error('[_reorder] - Unable to reorder. No commits provided.')
+      return RebaseResult.Error
+    }
+
+    const progressCallback = (progress: IMultiCommitOperationProgress) => {
+      this.repositoryStateCache.updateMultiCommitOperationState(
+        repository,
+        () => ({
+          progress,
+        })
+      )
+
+      this.emitUpdate()
+    }
+
+    const gitStore = this.gitStoreCache.get(repository)
+    const result = await gitStore.performFailableOperation(() =>
+      reorder(
+        repository,
+        commitsToReorder,
+        beforeCommit,
+        lastRetainedCommitRef,
+        progressCallback
+      )
+    )
+
+    return result || RebaseResult.Error
   }
 
   /** This shouldn't be called directly. See `Dispatcher`. */
